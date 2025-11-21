@@ -390,7 +390,8 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ onNavigate }) => {
 
   return (
     <div className="relative w-full h-full flex items-center justify-center p-4 bg-black">
-      {/* Editor Toggle */}
+      {/* Editor Toggle (Disabled for users) */}
+      {/* 
       <button
         onClick={() => setIsEditorMode(!isEditorMode)}
         className={`absolute top-4 right-4 z-50 px-4 py-2 rounded font-bold text-sm transition-colors ${
@@ -399,6 +400,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ onNavigate }) => {
       >
         {isEditorMode ? 'Exit Editor' : 'Editor Mode'}
       </button>
+      */}
 
       {/* Editor Panel */}
       {isEditorMode && (
