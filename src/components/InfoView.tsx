@@ -75,6 +75,18 @@ const createDefaultChannels = (): ChannelData[] =>
     lastUpdated: Date.now(),
   }));
 
+// Helper to calculate decayed burning
+const calculateBurning = (burning: number, players: number, lastUpdated: number) => {
+    if (players === 0) return burning; // No decay if 0 players
+
+    const msElapsed = Date.now() - lastUpdated;
+    const minutesElapsed = Math.floor(msElapsed / 1000 / 60);
+    const decaySteps = Math.floor(minutesElapsed / 15);
+    
+    // Decrease by 10% per step, min 0
+    return Math.max(0, burning - (decaySteps * 10));
+};
+
 export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
   // Initialize state immediately with defaults so UI renders instantly
   const [channels, setChannels] = useState<ChannelData[]>(createDefaultChannels);
@@ -88,6 +100,9 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
   const [editBurning, setEditBurning] = useState<string>('');
   const [editPlayers, setEditPlayers] = useState<number>(0);
   const [burningError, setBurningError] = useState<string | null>(null);
+
+  // Force re-render every minute to update decay
+  const [, setTick] = useState(0);
 
   // Derived map name for DB storage (e.g. "Phantasmal Road 2")
   const currentMapName = getMapTitle(mapId);
@@ -130,6 +145,7 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
     fetchChannels();
 
     // 2. Subscribe to Realtime Changes
+    console.log(`Subscribing to changes for map: ${currentMapName}`);
     const channel = supabase
       .channel(`map_tracker_${mapId}`)
       .on(
@@ -141,6 +157,7 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
           filter: `map_id=eq.${currentMapName}`,
         },
         (payload) => {
+          console.log("Realtime update received:", payload);
           const newRow = payload.new as any;
           
           setChannels((prev) => 
@@ -158,12 +175,22 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
           );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Subscription status for ${currentMapName}:`, status);
+      });
 
     return () => {
       if (supabase) supabase.removeChannel(channel);
     };
   }, [mapId, currentMapName]);
+
+  // Timer for decay updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+        setTick(t => t + 1);
+    }, 60000); // Every minute
+    return () => clearInterval(interval);
+  }, []);
 
   // --- Safety Guard for Missing Config ---
   if (!supabase) {
@@ -193,8 +220,9 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
   }
 
   const handleChannelClick = (channel: ChannelData) => {
+    const decayedBurning = calculateBurning(channel.burning, channel.players, channel.lastUpdated);
     setSelectedChannel(channel);
-    setEditBurning(channel.burning.toString());
+    setEditBurning(decayedBurning.toString());
     setEditPlayers(channel.players);
     setBurningError(null);
     setIsModalOpen(true);
@@ -306,6 +334,9 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
                     // Suggestion 1: Stale Data Detection
                     const isStale = (Date.now() - channel.lastUpdated) > STALE_DATA_THRESHOLD_MS;
                     
+                    // Calculate effective burning with decay
+                    const effectiveBurning = calculateBurning(channel.burning, channel.players, channel.lastUpdated);
+
                     return (
                     <button
                         key={channel.id}
@@ -366,9 +397,9 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
                             absolute inset-0 flex items-center justify-center font-bold text-[18px]
                             ${isSelected ? 'text-white drop-shadow-sm' : ''}
                           `}
-                          style={!isSelected ? { color: getBurningColor(channel.burning) } : undefined}
+                          style={!isSelected ? { color: getBurningColor(effectiveBurning) } : undefined}
                         >
-                            {channel.burning}%
+                            {effectiveBurning}%
                         </span>
 
                         {/* Bottom Right: Players */}
