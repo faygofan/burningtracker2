@@ -1,0 +1,5 @@
+{
+  "name": "Burning Tracker",
+  "description": "A minimalist, full-screen viewer for the Tallhart map.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Suggestion 6: Title, Favicon, and Meta Tags -->
+    <title>Burning Tracker | MapleStory</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
+    
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:title" content="Tallhart Map Tracker" />
+    <meta property="og:description" content="Real-time crowdsourced burning field tracker for MapleStory." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://g.nexonstatic.com/media/afeezwjw/tallhartmap.png" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Ensure the body is black immediately to prevent white flashes */
+        body {
+            background-color: #000000;
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars at the body level */
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.84.0"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
