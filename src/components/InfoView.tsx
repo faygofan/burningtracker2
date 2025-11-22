@@ -75,16 +75,36 @@ const createDefaultChannels = (): ChannelData[] =>
     lastUpdated: Date.now(),
   }));
 
-// Helper to calculate decayed burning
-const calculateBurning = (burning: number, players: number, lastUpdated: number) => {
-  if (players === 0) return burning; // No decay if 0 players
+// Helper to calculate decayed burning and effective update time
+const getChannelState = (channel: ChannelData) => {
+  if (channel.players === 0) {
+    return {
+      burning: channel.burning,
+      lastUpdated: channel.lastUpdated
+    };
+  }
 
-  const msElapsed = Date.now() - lastUpdated;
+  const msElapsed = Date.now() - channel.lastUpdated;
   const minutesElapsed = Math.floor(msElapsed / 1000 / 60);
   const decaySteps = Math.floor(minutesElapsed / 15);
 
-  // Decrease by 10% per step, min 0
-  return Math.max(0, burning - (decaySteps * 10));
+  // Calculate max steps until burning hits 0
+  const maxDecaySteps = Math.ceil(channel.burning / 10);
+
+  // We only count decay steps that actually reduced the burning
+  const actualSteps = Math.min(decaySteps, maxDecaySteps);
+
+  const effectiveBurning = Math.max(0, channel.burning - (actualSteps * 10));
+
+  // If decay occurred, the "effective" update time is the time of the last decay
+  const effectiveLastUpdated = actualSteps > 0
+    ? channel.lastUpdated + (actualSteps * 15 * 60 * 1000)
+    : channel.lastUpdated;
+
+  return {
+    burning: effectiveBurning,
+    lastUpdated: effectiveLastUpdated
+  };
 };
 
 export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
@@ -223,7 +243,7 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
   }
 
   const handleChannelClick = (channel: ChannelData) => {
-    const decayedBurning = calculateBurning(channel.burning, channel.players, channel.lastUpdated);
+    const { burning: decayedBurning } = getChannelState(channel);
     setSelectedChannel(channel);
     setEditBurning(decayedBurning.toString());
     setEditPlayers(channel.players);
@@ -342,11 +362,12 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
             {channels.map((channel) => {
               const isFull = channel.players >= 4;
               const isSelected = selectedChannel?.id === channel.id;
-              // Suggestion 1: Stale Data Detection
-              const isStale = (Date.now() - channel.lastUpdated) > STALE_DATA_THRESHOLD_MS;
 
-              // Calculate effective burning with decay
-              const effectiveBurning = calculateBurning(channel.burning, channel.players, channel.lastUpdated);
+              // Calculate effective state (burning + time)
+              const { burning: effectiveBurning, lastUpdated: effectiveLastUpdated } = getChannelState(channel);
+
+              // Suggestion 1: Stale Data Detection (using effective time)
+              const isStale = (Date.now() - effectiveLastUpdated) > STALE_DATA_THRESHOLD_MS;
 
               return (
                 <button
@@ -396,7 +417,7 @@ export const InfoView: React.FC<InfoViewProps> = ({ mapId, onBack }) => {
                                     ${isStale ? 'bg-orange-900 text-orange-100 border-orange-700' : 'bg-[#202225] text-[#dcddde]'}
                                 `}>
                         {isStale && <span className="mr-1">⚠️</span>}
-                        Updated {new Date(channel.lastUpdated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        Updated {new Date(effectiveLastUpdated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                       </div>
                       <div className={`w-2 h-2 absolute right-1 -bottom-1 rotate-45 border-r border-b border-[#18191c] ${isStale ? 'bg-orange-900 border-orange-700' : 'bg-[#202225]'}`}></div>
                     </div>
